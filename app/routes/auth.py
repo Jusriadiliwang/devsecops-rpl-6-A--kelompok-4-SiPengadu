@@ -15,10 +15,11 @@ import bleach
 from urllib.parse import urlparse
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, login_required, current_user
-from app import db, limiter
+from app import db
 from app.models import User
 from app.forms import LoginForm, RegisterForm
 from app.utils.logger import log_activity
+from app.utils.rate_limit import rate_limit
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -55,12 +56,7 @@ def _safe_next(next_url: str) -> str:
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-# ----------------------------------------------------------------
-# FIX #2: Rate Limiter — maksimal 5 percobaan login per menit per IP
-# Mencegah brute force attack (OWASP A07:2021).
-# Error 429 dikembalikan jika batas terlampaui.
-# ----------------------------------------------------------------
-@limiter.limit("5 per minute", error_message="Terlalu banyak percobaan login. Coba lagi dalam 1 menit.")
+@rate_limit(5, 60, "Terlalu banyak percobaan login. Coba lagi dalam 1 menit.")
 def login():
     """Halaman login."""
     if current_user.is_authenticated:
@@ -119,7 +115,7 @@ def login():
 
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
-@limiter.limit("3 per minute")
+@rate_limit(3, 60, "Terlalu banyak percobaan registrasi. Coba lagi dalam 1 menit.")
 def register():
     """Halaman registrasi pengguna baru."""
     if current_user.is_authenticated:
