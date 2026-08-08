@@ -7,7 +7,7 @@ Flask-Limiter==3.5.0
 python-dotenv==1.0.0
 bleach==6.1.0
 WTForms==3.1.2
-SQLAlchemy==2.0.23
+SQLAlchemy==2.0.36
 Werkzeug==2.3.7
 email-validator==2.1.0
 cloudinary==1.36.0
