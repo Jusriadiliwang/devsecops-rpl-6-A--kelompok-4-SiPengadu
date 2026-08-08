@@ -11,8 +11,5 @@
       "src": "/(.*)",
       "dest": "run.py"
     }
-  ],
-  "env": {
-    "FLASK_ENV": "production"
-  }
+  ]
 }
