@@ -7,24 +7,62 @@ di-hard-code langsung di source code ini.
 """
 import os
 from datetime import timedelta
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 basedir = os.path.abspath(os.path.dirname(__file__))
+
+
+def _build_db_uri():
+    """
+    Bangun DATABASE URI yang kompatibel dengan pg8000 (pure-Python driver).
+    - Konversi scheme postgres:// / postgresql:// → postgresql+pg8000://
+    - Hapus query param yang tidak dikenal pg8000 (sslmode, channel_binding)
+    - Tambahkan ssl_context=True untuk koneksi aman ke Neon
+    """
+    raw = (
+        os.environ.get('DATABASE_URL')
+        or 'sqlite:///' + os.path.join(basedir, 'instance', 'pengaduan.db')
+    )
+
+    if raw.startswith('sqlite'):
+        return raw, {'pool_pre_ping': True}
+
+    # Normalisasi scheme ke postgresql+pg8000://
+    if raw.startswith('postgres://'):
+        raw = 'postgresql+pg8000://' + raw[len('postgres://'):]
+    elif raw.startswith('postgresql://') and '+' not in raw.split('://')[0]:
+        raw = 'postgresql+pg8000://' + raw[len('postgresql://'):]
+
+    # Hapus query param yang tidak didukung pg8000
+    parsed = urlparse(raw)
+    params = parse_qs(parsed.query, keep_blank_values=True)
+    for bad_param in ('sslmode', 'channel_binding', 'options'):
+        params.pop(bad_param, None)
+    new_query = urlencode({k: v[0] for k, v in params.items()})
+    clean_url = urlunparse(parsed._replace(query=new_query))
+
+    # Engine options untuk Vercel serverless + Neon
+    engine_opts = {
+        'pool_pre_ping': True,
+        'pool_size': 1,
+        'max_overflow': 0,
+        'pool_timeout': 30,
+        'connect_args': {'ssl_context': True},
+    }
+    return clean_url, engine_opts
+
+
+_DB_URI, _ENGINE_OPTIONS = _build_db_uri()
 
 
 class Config:
     # ----------------------------------------------------------
     # KEAMANAN: SECRET_KEY diambil WAJIB dari environment variable.
-    # FIX MEDIUM: Tidak ada fallback hardcoded — jika env var tidak
-    # di-set, aplikasi langsung raise ValueError (gagal cepat / fail-fast)
-    # daripada diam-diam menggunakan key lemah yang diketahui publik.
-    # (OWASP A02:2021 - Cryptographic Failures)
     # ----------------------------------------------------------
     SECRET_KEY = os.environ.get('SECRET_KEY')
     if not SECRET_KEY:
-        # Development: izinkan dengan key acak sementara (bukan hardcoded)
         import secrets as _secrets
         SECRET_KEY = _secrets.token_hex(32)
-        # Peringatan ini akan muncul di log startup
         import warnings as _warnings
         _warnings.warn(
             "[KEAMANAN] SECRET_KEY tidak di-set di environment variable! "
@@ -34,54 +72,36 @@ class Config:
             stacklevel=2,
         )
 
-    # Database - defaultnya SQLite untuk development lokal
-    # Fix: Neon/Heroku pakai "postgres://" tapi SQLAlchemy 2.x butuh "postgresql://"
-    # Fix: Vercel serverless tidak bisa compile psycopg2, pakai pg8000 (pure Python)
-    _db_url = (
-        os.environ.get('DATABASE_URL') or
-        'sqlite:///' + os.path.join(basedir, 'instance', 'pengaduan.db')
-    )
-    if _db_url.startswith('postgres://'):
-        _db_url = _db_url.replace('postgres://', 'postgresql+pg8000://', 1)
-    elif _db_url.startswith('postgresql://') and not _db_url.startswith('postgresql+'):
-        _db_url = _db_url.replace('postgresql://', 'postgresql+pg8000://', 1)
-    SQLALCHEMY_DATABASE_URI = _db_url
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_pre_ping': True,
-        'pool_recycle': 300,
-        'connect_args': {'ssl_context': True} if os.environ.get('DATABASE_URL') else {},
-    }
+    # Database
+    SQLALCHEMY_DATABASE_URI = _DB_URI
+    SQLALCHEMY_ENGINE_OPTIONS = _ENGINE_OPTIONS
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # ----------------------------------------------------------
     # KEAMANAN: Konfigurasi session cookie yang aman
-    # - HttpOnly  : cegah akses JavaScript ke cookie (XSS mitigation)
-    # - SameSite  : cegah pengiriman cookie cross-site (CSRF mitigation)
-    # - Name      : nama custom agar tidak mudah diidentifikasi sebagai Flask
-    # - Lifetime  : batas waktu sesi aktif
     # ----------------------------------------------------------
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE  = 'Lax'
-    SESSION_COOKIE_NAME      = 'sipengadu_sess'   # Sembunyikan identitas framework
+    SESSION_COOKIE_NAME      = 'sipengadu_sess'
     PERMANENT_SESSION_LIFETIME = timedelta(hours=2)
 
     # CSRF Protection (Flask-WTF)
     WTF_CSRF_ENABLED    = True
-    WTF_CSRF_TIME_LIMIT = 3600  # token kedaluwarsa 1 jam
+    WTF_CSRF_TIME_LIMIT = 3600
 
-    # ----------------------------------------------------------
-    # FIX MEDIUM: Konfigurasi cookie "Ingat Saya" yang aman.
-    # Tanpa ini Flask-Login menggunakan default yang tidak membatasi
-    # durasi dan tidak mengatur HttpOnly / Secure flag secara eksplisit.
-    # ----------------------------------------------------------
+    # Cookie "Ingat Saya"
     REMEMBER_COOKIE_DURATION  = timedelta(days=7)
     REMEMBER_COOKIE_HTTPONLY  = True
     REMEMBER_COOKIE_NAME      = 'sipengadu_rm'
     REMEMBER_COOKIE_SAMESITE  = 'Lax'
 
-    # File Upload
-    MAX_CONTENT_LENGTH = 5 * 1024 * 1024   # Maksimal 5 MB
-    UPLOAD_FOLDER      = os.path.join(basedir, 'uploads')
+    # File Upload — gunakan /tmp di production (Vercel read-only fs)
+    MAX_CONTENT_LENGTH = 5 * 1024 * 1024
+    UPLOAD_FOLDER = (
+        '/tmp/uploads'
+        if os.environ.get('FLASK_ENV') == 'production'
+        else os.path.join(basedir, 'uploads')
+    )
     ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg'}
 
     # Pagination
@@ -91,14 +111,14 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    SESSION_COOKIE_SECURE  = False   # HTTP diizinkan di development
+    SESSION_COOKIE_SECURE  = False
     REMEMBER_COOKIE_SECURE = False
 
 
 class ProductionConfig(Config):
     DEBUG = False
-    SESSION_COOKIE_SECURE  = True    # Wajib HTTPS di production
-    REMEMBER_COOKIE_SECURE = True    # FIX: cookie "ingat saya" wajib HTTPS
+    SESSION_COOKIE_SECURE  = True
+    REMEMBER_COOKIE_SECURE = True
 
 
 config_map = {

@@ -11,5 +11,4 @@ SQLAlchemy==2.0.36
 Werkzeug==2.3.7
 email-validator==2.1.0
 cloudinary==1.36.0
-psycopg2-binary==2.9.9
 pg8000==1.31.1

@@ -61,8 +61,11 @@ def create_app(config_name='default'):
     login_manager.login_message_category = 'warning'
     login_manager.session_protection = 'strong'
 
-    # Pastikan folder upload ada
-    os.makedirs(app.config.get('UPLOAD_FOLDER', 'uploads'), exist_ok=True)
+    # Pastikan folder upload ada (gunakan try-except karena Vercel read-only)
+    try:
+        os.makedirs(app.config.get('UPLOAD_FOLDER', 'uploads'), exist_ok=True)
+    except OSError:
+        pass
 
     # Daftarkan Blueprint
     from app.routes.auth import auth_bp

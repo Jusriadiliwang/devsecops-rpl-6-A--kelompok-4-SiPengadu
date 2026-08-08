@@ -3,25 +3,48 @@ Entry point aplikasi SiPengadu.
 Muat .env SEBELUM mengimpor modul apapun yang membaca os.environ.
 """
 import os
+import traceback as _tb
 
 # Muat environment variables dari file .env (hanya efektif di lokal)
 from dotenv import load_dotenv
 load_dotenv()
 
-from app import create_app, db
-from app.models import User, Kecamatan, Desa
+# ----------------------------------------------------------------
+# Bungkus import dalam try-except agar error tampil di browser
+# sebagai JSON (bukan "Serverless Function crashed" yang tidak
+# memberikan informasi apapun).
+# ----------------------------------------------------------------
+_init_error = None
+_init_tb = None
 
-# app harus di top-level agar Vercel bisa import langsung
-app = create_app(os.getenv('FLASK_ENV', 'development'))
+try:
+    from app import create_app, db
+    from app.models import User, Kecamatan, Desa
+    app = create_app(os.getenv('FLASK_ENV', 'development'))
+except Exception as _e:
+    _init_error = str(_e)
+    _init_tb = _tb.format_exc()
+
+    # Buat Flask minimal yang hanya menampilkan error
+    from flask import Flask as _Flask, jsonify as _jsonify
+    app = _Flask(__name__)
+
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def _show_error(path=''):
+        return _jsonify({
+            'status': 'init_error',
+            'error': _init_error,
+            'traceback': _init_tb,
+        }), 500
 
 
 @app.route('/init-db')
 def init_db_route():
-    """
-    Route sementara untuk inisialisasi database di production.
-    HAPUS atau NONAKTIFKAN setelah database berhasil diinisialisasi!
-    Akses: GET /init-db
-    """
+    """Route untuk inisialisasi database PostgreSQL setelah deploy."""
+    if _init_error:
+        from flask import jsonify
+        return jsonify({'status': 'error', 'error': _init_error, 'traceback': _init_tb}), 500
     init_token = os.getenv('INIT_DB_TOKEN', '')
     from flask import request, jsonify
     token = request.args.get('token', '')
@@ -31,11 +54,11 @@ def init_db_route():
         init_db()
         return jsonify({'status': 'ok', 'message': 'Database berhasil diinisialisasi.'}), 200
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        return jsonify({'status': 'error', 'message': str(e), 'traceback': _tb.format_exc()}), 500
 
 
 def init_db():
-    """Inisialisasi tabel database dan buat akun admin default."""
+    """Inisialisasi tabel database dan seed data awal."""
     with app.app_context():
         db.create_all()
 
@@ -45,10 +68,12 @@ def init_db():
                 {'name': 'Rappocini', 'code': 'RPC'},
                 {'name': 'Tamalate', 'code': 'TML'},
             ]
+            kec_map = {}
             for k in kec_data:
                 kec = Kecamatan(name=k['name'], code=k['code'])
                 db.session.add(kec)
-            db.session.flush()
+                db.session.flush()
+                kec_map[k['name']] = kec.id
 
             desa_data = [
                 {'name': 'Rappocini', 'kecamatan': 'Rappocini'},
@@ -58,10 +83,8 @@ def init_db():
                 {'name': 'Parang Tambung', 'kecamatan': 'Tamalate'},
             ]
             for d in desa_data:
-                kec = Kecamatan.query.filter_by(name=d['kecamatan']).first()
-                if kec:
-                    desa = Desa(name=d['name'], kecamatan_id=kec.id)
-                    db.session.add(desa)
+                desa = Desa(name=d['name'], kecamatan_id=kec_map[d['kecamatan']])
+                db.session.add(desa)
             db.session.commit()
             print('[INIT] Kecamatan dan Desa berhasil di-seed.')
 
@@ -80,17 +103,14 @@ def init_db():
             db.session.commit()
             print('[INIT] Akun admin berhasil dibuat.')
         else:
-            print('[INIT] Akun admin sudah ada, lewati pembuatan.')
+            print('[INIT] Akun admin sudah ada.')
 
 
 if __name__ == '__main__':
     flask_env = os.getenv('FLASK_ENV', 'development')
 
-    # Cegah aplikasi dijalankan dengan DEBUG=True di production
     if flask_env == 'production' and app.config.get('DEBUG'):
-        raise RuntimeError(
-            '[KEAMANAN] DEBUG=True tidak boleh aktif di environment production!'
-        )
+        raise RuntimeError('[KEAMANAN] DEBUG=True tidak boleh aktif di production!')
 
     os.makedirs('instance', exist_ok=True)
     os.makedirs('uploads', exist_ok=True)
