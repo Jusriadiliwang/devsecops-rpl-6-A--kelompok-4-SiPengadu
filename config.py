@@ -36,13 +36,21 @@ class Config:
 
     # Database - defaultnya SQLite untuk development lokal
     # Fix: Neon/Heroku pakai "postgres://" tapi SQLAlchemy 2.x butuh "postgresql://"
+    # Fix: Vercel serverless tidak bisa compile psycopg2, pakai pg8000 (pure Python)
     _db_url = (
         os.environ.get('DATABASE_URL') or
         'sqlite:///' + os.path.join(basedir, 'instance', 'pengaduan.db')
     )
     if _db_url.startswith('postgres://'):
-        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+        _db_url = _db_url.replace('postgres://', 'postgresql+pg8000://', 1)
+    elif _db_url.startswith('postgresql://') and not _db_url.startswith('postgresql+'):
+        _db_url = _db_url.replace('postgresql://', 'postgresql+pg8000://', 1)
     SQLALCHEMY_DATABASE_URI = _db_url
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+        'connect_args': {'ssl_context': True} if os.environ.get('DATABASE_URL') else {},
+    }
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # ----------------------------------------------------------
