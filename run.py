@@ -5,9 +5,19 @@ Muat .env SEBELUM mengimpor modul apapun yang membaca os.environ.
 import os
 import traceback as _tb
 
+# ----------------------------------------------------------------
+# PENTING: Vercel melakukan static scan untuk nama 'app' di top-level.
+# Deklarasikan dulu sebelum try/except agar scanner menemukannya.
+# Nilai akan di-assign ulang oleh blok try/except di bawah.
+# ----------------------------------------------------------------
+app = None  # noqa: E402  — Vercel top-level entrypoint marker
+
 # Muat environment variables dari file .env (hanya efektif di lokal)
-from dotenv import load_dotenv
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
 
 # ----------------------------------------------------------------
 # Bungkus import dalam try-except agar error tampil di browser
