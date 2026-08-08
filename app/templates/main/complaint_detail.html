@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Pengaduan #{{ complaint.id }}{% endblock %}
+{% block topbar_title %}Detail Pengaduan{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-header-title">Pengaduan #{{ complaint.id }}</h1>
+    <p class="page-header-sub">{{ complaint.created_at.strftime('%d %B %Y, %H:%M') }} WIB</p>
+  </div>
+  <div class="d-flex gap-2">
+    {% if complaint.status == 'pending' %}
+    <a href="{{ url_for('main.complaint_edit', cid=complaint.id) }}"
+       class="btn btn-outline-secondary btn-sm">
+      <i class="fas fa-edit me-1"></i>Edit
+    </a>
+    <form method="POST" action="{{ url_for('main.complaint_delete', cid=complaint.id) }}"
+          onsubmit="return confirm('Hapus pengaduan ini? Tindakan tidak dapat dibatalkan.')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-danger btn-sm">
+        <i class="fas fa-trash me-1"></i>Hapus
+      </button>
+    </form>
+    {% endif %}
+    <a href="{{ url_for('main.complaints') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="fas fa-arrow-left me-1"></i>Kembali
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Main detail -->
+  <div class="col-lg-8">
+    <div class="card mb-4">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="fas fa-file-alt me-2 text-primary"></i>Detail Pengaduan</span>
+        <span class="badge {{ complaint.get_status_badge() }} fs-sm">{{ complaint.get_status_label() }}</span>
+      </div>
+      <div class="card-body p-4">
+        <h5 class="fw-bold mb-3">{{ complaint.title }}</h5>
+
+        <div class="row g-2 mb-4">
+          <div class="col-sm-6">
+            <div class="text-muted" style="font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em;">Kategori</div>
+            <div class="mt-1">
+              <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ complaint.get_category_label() }}</span>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="text-muted" style="font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em;">Lokasi</div>
+            <div class="mt-1 fw-medium"><i class="fas fa-map-marker-alt text-danger me-1"></i>{{ complaint.location }}</div>
+          </div>
+          <div class="col-sm-6 mt-2">
+            <div class="text-muted" style="font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em;">Tanggal Kirim</div>
+            <div class="mt-1">{{ complaint.created_at.strftime('%d %B %Y') }}</div>
+          </div>
+          {% if complaint.updated_at and complaint.updated_at != complaint.created_at %}
+          <div class="col-sm-6 mt-2">
+            <div class="text-muted" style="font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em;">Terakhir Diperbarui</div>
+            <div class="mt-1">{{ complaint.updated_at.strftime('%d %B %Y') }}</div>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="text-muted" style="font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;">Deskripsi</div>
+        <div style="white-space:pre-wrap; line-height:1.75; color:var(--text); font-size:.9rem;">{{ complaint.description }}</div>
+      </div>
+    </div>
+
+    <!-- Admin Response -->
+    {% if complaint.admin_response %}
+    <div class="card" style="border-left:4px solid var(--primary);">
+      <div class="card-header"><i class="fas fa-reply me-2 text-primary"></i>Tanggapan Admin</div>
+      <div class="card-body p-4">
+        <div style="white-space:pre-wrap; line-height:1.75;">{{ complaint.admin_response }}</div>
+        {% if complaint.reviewer %}
+        <div class="text-muted mt-3" style="font-size:.78rem;">
+          <i class="fas fa-user-shield me-1"></i>Ditinjau oleh: {{ complaint.reviewer.full_name }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Photo gallery -->
+    {% if photo_urls %}
+    <div class="card mt-4">
+      <div class="card-header"><i class="fas fa-images me-2 text-primary"></i>Foto Bukti ({{ photo_urls|length }})</div>
+      <div class="card-body p-4">
+        <div class="gallery-grid">
+          {% for url in photo_urls %}
+          <div class="gallery-item" onclick="openLightbox('{{ url }}')">
+            <img src="{{ url }}" alt="Foto bukti {{ loop.index }}" loading="lazy">
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Status sidebar -->
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header"><i class="fas fa-info-circle me-2 text-primary"></i>Status Saat Ini</div>
+      <div class="card-body p-4">
+        <div class="text-center mb-3">
+          {% set s = complaint.status %}
+          {% if s == 'pending' %}
+            <div style="width:60px;height:60px;border-radius:50%;background:#fffbeb;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;color:#f59e0b;">
+              <i class="fas fa-clock"></i>
+            </div>
+          {% elif s == 'in_review' %}
+            <div style="width:60px;height:60px;border-radius:50%;background:#ecfeff;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;color:#06b6d4;">
+              <i class="fas fa-search"></i>
+            </div>
+          {% elif s == 'resolved' %}
+            <div style="width:60px;height:60px;border-radius:50%;background:#ecfdf5;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;color:#10b981;">
+              <i class="fas fa-check-circle"></i>
+            </div>
+          {% else %}
+            <div style="width:60px;height:60px;border-radius:50%;background:#fef2f2;display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;color:#ef4444;">
+              <i class="fas fa-times-circle"></i>
+            </div>
+          {% endif %}
+          <div class="mt-2">
+            <span class="badge {{ complaint.get_status_badge() }}" style="font-size:.85rem; padding:6px 14px;">
+              {{ complaint.get_status_label() }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Progress steps -->
+        <ul class="timeline mt-4">
+          {% set statuses = [('pending','Pengaduan Dikirim','amber','fa-clock'),
+                             ('in_review','Sedang Ditinjau','cyan','fa-search'),
+                             ('resolved','Selesai','emerald','fa-check-circle')] %}
+          {% set current_idx = {'pending':0,'in_review':1,'resolved':2,'rejected':1}[complaint.status] %}
+          {% for st, label, color, icon in statuses %}
+          {% set idx = loop.index0 %}
+          <li class="timeline-item">
+            <div class="timeline-dot stat-icon {{ color if idx <= current_idx else '' }}"
+                 style="width:28px;height:28px;{% if idx > current_idx %}background:var(--bg);{% endif %}">
+              <i class="fas {{ icon }}" style="font-size:.65rem;"></i>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-label {% if idx > current_idx %}text-muted{% endif %}">{{ label }}</div>
+              {% if idx == 0 %}
+              <div class="timeline-time">{{ complaint.created_at.strftime('%d %b %Y') }}</div>
+              {% elif idx == current_idx and complaint.updated_at %}
+              <div class="timeline-time">{{ complaint.updated_at.strftime('%d %b %Y') }}</div>
+              {% endif %}
+            </div>
+          </li>
+          {% endfor %}
+          {% if complaint.status == 'rejected' %}
+          <li class="timeline-item">
+            <div class="timeline-dot stat-icon red" style="width:28px;height:28px;">
+              <i class="fas fa-times" style="font-size:.65rem;"></i>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-label">Ditolak</div>
+              {% if complaint.updated_at %}<div class="timeline-time">{{ complaint.updated_at.strftime('%d %b %Y') }}</div>{% endif %}
+            </div>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+  <img class="lightbox-img" id="lightboxImg" src="" alt="Foto bukti">
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openLightbox(url) {
+  document.getElementById('lightboxImg').src = url;
+  document.getElementById('lightbox').classList.add('active');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+{% endblock %}

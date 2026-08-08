@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Admin{% endblock %}
+{% block topbar_title %}Dashboard Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-header-title">Dashboard Admin</h1>
+    <p class="page-header-sub">Selamat datang, {{ current_user.full_name }}</p>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon indigo"><i class="fas fa-users"></i></div>
+      <div>
+        <div class="stat-value">{{ total_users }}</div>
+        <div class="stat-label">Total Pengguna</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon cyan"><i class="fas fa-file-alt"></i></div>
+      <div>
+        <div class="stat-value">{{ total_complaints }}</div>
+        <div class="stat-label">Total Pengaduan</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon amber"><i class="fas fa-clock"></i></div>
+      <div>
+        <div class="stat-value">{{ pending }}</div>
+        <div class="stat-label">Menunggu Tindakan</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon emerald"><i class="fas fa-check-circle"></i></div>
+      <div>
+        <div class="stat-value">{{ resolved }}</div>
+        <div class="stat-label">Terselesaikan</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Secondary stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3" style="border-left:3px solid var(--info);">
+      <div style="font-size:1.4rem;font-weight:700;color:var(--info);">{{ in_review }}</div>
+      <div class="text-muted" style="font-size:.78rem;">Sedang Ditinjau</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3" style="border-left:3px solid var(--danger);">
+      <div style="font-size:1.4rem;font-weight:700;color:var(--danger);">{{ rejected }}</div>
+      <div class="text-muted" style="font-size:.78rem;">Ditolak</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Recent complaints -->
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-inbox me-2 text-primary"></i>Pengaduan Terbaru</span>
+        <a href="{{ url_for('admin.complaints') }}" class="btn btn-sm btn-outline-primary">Lihat Semua</a>
+      </div>
+      {% if recent_complaints %}
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr><th>#</th><th>Judul</th><th>Status</th><th>Tanggal</th></tr>
+          </thead>
+          <tbody>
+            {% for c in recent_complaints %}
+            <tr>
+              <td class="text-muted">{{ c.id }}</td>
+              <td>
+                <a href="{{ url_for('admin.complaint_detail', cid=c.id) }}"
+                   class="text-decoration-none fw-medium text-dark">{{ c.title | truncate(40) }}</a>
+              </td>
+              <td><span class="badge {{ c.get_status_badge() }}">{{ c.get_status_label() }}</span></td>
+              <td class="text-muted">{{ c.created_at.strftime('%d %b %Y') }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state"><div class="empty-icon"><i class="fas fa-inbox"></i></div><div class="empty-title">Belum ada pengaduan</div></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Recent logs -->
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-shield-alt me-2 text-danger"></i>Log Terbaru</span>
+        <a href="{{ url_for('admin.logs') }}" class="btn btn-sm btn-outline-danger">Lihat Semua</a>
+      </div>
+      {% if recent_logs %}
+      <div style="max-height:340px;overflow-y:auto;">
+        <ul class="list-group list-group-flush">
+          {% for log in recent_logs %}
+          <li class="list-group-item py-2 px-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="badge
+                {% if 'FAILED' in log.action or 'DENIED' in log.action %}bg-danger
+                {% elif 'DELETE' in log.action or 'ROLE' in log.action %}bg-warning text-dark
+                {% elif 'LOGIN' in log.action %}bg-success
+                {% else %}bg-info
+                {% endif %}" style="font-size:.65rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;">
+                {{ log.action }}
+              </span>
+              <small class="text-muted">{{ log.timestamp.strftime('%H:%M %d/%m') }}</small>
+            </div>
+            {% if log.details %}
+            <small class="text-muted d-block mt-1">{{ log.details | truncate(55) }}</small>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% else %}
+      <div class="empty-state"><div class="empty-icon"><i class="fas fa-scroll"></i></div><div class="empty-title">Belum ada log</div></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

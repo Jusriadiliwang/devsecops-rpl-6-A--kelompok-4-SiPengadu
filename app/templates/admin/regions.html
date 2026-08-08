@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Kelola Wilayah{% endblock %}
+{% block topbar_title %}Kelola Wilayah{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-header-title">Kelola Wilayah</h1>
+    <p class="page-header-sub">Manajemen kecamatan dan desa/kelurahan</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalKecamatan">
+      <i class="fas fa-plus me-1"></i>Tambah Kecamatan
+    </button>
+    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalDesa">
+      <i class="fas fa-plus me-1"></i>Tambah Desa
+    </button>
+  </div>
+</div>
+
+{% if not kecamatans %}
+<div class="text-center py-5 text-muted">
+  <i class="fas fa-map-marked-alt fa-3x mb-3 d-block opacity-25"></i>
+  <p>Belum ada kecamatan. Tambah kecamatan terlebih dahulu.</p>
+</div>
+{% endif %}
+
+{% for k in kecamatans %}
+<div class="card mb-3 border-0 shadow-sm">
+  <div class="card-header d-flex align-items-center justify-content-between py-2"
+       style="background:var(--primary-50,#eef2ff);border-bottom:1px solid var(--primary-100,#e0e7ff);">
+    <div class="d-flex align-items-center gap-2">
+      <i class="fas fa-map-marker-alt text-primary"></i>
+      <span class="fw-semibold text-primary">Kecamatan {{ k.name }}</span>
+      {% if k.code %}
+      <span class="badge bg-secondary bg-opacity-25 text-secondary" style="font-size:.7rem;">{{ k.code }}</span>
+      {% endif %}
+      <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:.7rem;">
+        {{ k.desas.count() }} desa
+      </span>
+    </div>
+    <div class="d-flex gap-1">
+      <a href="{{ url_for('admin.kecamatan_edit', kid=k.id) }}"
+         class="btn btn-sm btn-outline-secondary" title="Edit">
+        <i class="fas fa-edit"></i>
+      </a>
+      <form method="POST" action="{{ url_for('admin.kecamatan_delete', kid=k.id) }}"
+            onsubmit="return confirm('Hapus kecamatan {{ k.name }}? Semua desa di dalamnya juga akan dihapus.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus">
+          <i class="fas fa-trash"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    {% if k.desas.count() == 0 %}
+    <p class="text-muted text-center py-3 mb-0" style="font-size:.85rem;">
+      Belum ada desa/kelurahan di kecamatan ini.
+    </p>
+    {% else %}
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Nama Desa / Kelurahan</th>
+            <th>Kode</th>
+            <th class="text-end">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in k.desas.order_by('name').all() %}
+          <tr>
+            <td class="text-muted" style="font-size:.8rem;">{{ loop.index }}</td>
+            <td><i class="fas fa-home me-1 text-muted" style="font-size:.75rem;"></i>{{ d.name }}</td>
+            <td class="text-muted" style="font-size:.8rem;">{{ d.code or '-' }}</td>
+            <td class="text-end">
+              <a href="{{ url_for('admin.desa_edit', did=d.id) }}"
+                 class="btn btn-xs btn-outline-secondary me-1">
+                <i class="fas fa-edit"></i>
+              </a>
+              <form method="POST" action="{{ url_for('admin.desa_delete', did=d.id) }}"
+                    class="d-inline"
+                    onsubmit="return confirm('Hapus desa {{ d.name }}?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-xs btn-outline-danger">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+
+{# ── Modal: Tambah Kecamatan ── #}
+<div class="modal fade" id="modalKecamatan" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-map-marker-alt me-2 text-primary"></i>Tambah Kecamatan</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('admin.kecamatan_create') }}" novalidate>
+        {{ kec_form.hidden_tag() }}
+        <div class="modal-body">
+          <div class="mb-3">
+            {{ kec_form.name.label(class='form-label fw-semibold') }}
+            {{ kec_form.name(class='form-control', placeholder='Contoh: Rappocini') }}
+            {% for e in kec_form.name.errors %}
+            <div class="invalid-feedback d-block">{{ e }}</div>
+            {% endfor %}
+          </div>
+          <div class="mb-3">
+            {{ kec_form.code.label(class='form-label fw-semibold') }}
+            {{ kec_form.code(class='form-control', placeholder='Opsional') }}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+          {{ kec_form.submit(class='btn btn-primary btn-sm') }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# ── Modal: Tambah Desa ── #}
+<div class="modal fade" id="modalDesa" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-home me-2 text-primary"></i>Tambah Desa / Kelurahan</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('admin.desa_create') }}" novalidate>
+        {{ desa_form.hidden_tag() }}
+        <div class="modal-body">
+          <div class="mb-3">
+            {{ desa_form.kecamatan_id.label(class='form-label fw-semibold') }}
+            {{ desa_form.kecamatan_id(class='form-select') }}
+            {% for e in desa_form.kecamatan_id.errors %}
+            <div class="invalid-feedback d-block">{{ e }}</div>
+            {% endfor %}
+          </div>
+          <div class="mb-3">
+            {{ desa_form.name.label(class='form-label fw-semibold') }}
+            {{ desa_form.name(class='form-control', placeholder='Contoh: Ballaparang') }}
+            {% for e in desa_form.name.errors %}
+            <div class="invalid-feedback d-block">{{ e }}</div>
+            {% endfor %}
+          </div>
+          <div class="mb-3">
+            {{ desa_form.code.label(class='form-label fw-semibold') }}
+            {{ desa_form.code(class='form-control', placeholder='Opsional') }}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+          {{ desa_form.submit(class='btn btn-primary btn-sm') }}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.btn-xs { padding: .15rem .4rem; font-size: .75rem; }
+</style>
+{% endblock %}

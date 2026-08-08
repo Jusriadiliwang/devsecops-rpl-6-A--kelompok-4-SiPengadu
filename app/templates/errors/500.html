@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}500 Kesalahan Server{% endblock %}
+{% block content %}
+<div class="row justify-content-center mt-5">
+  <div class="col-md-6 text-center">
+    <div class="display-1 text-secondary fw-bold">500</div>
+    <h3 class="fw-bold mt-2">Kesalahan Internal Server</h3>
+    <!-- KEAMANAN: Tampilkan pesan generik, TIDAK bocorkan detail teknis -->
+    <p class="text-muted">
+      Terjadi kesalahan pada sistem. Tim kami telah diberitahu.<br>
+      Silakan coba beberapa saat lagi.
+    </p>
+    <a href="{{ url_for('main.index') }}" class="btn btn-primary mt-2">
+      <i class="fas fa-home me-2"></i>Kembali ke Beranda
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Edit Pengaduan #{{ complaint.id }}{% endblock %}
+{% block topbar_title %}Edit Pengaduan{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-header-title">Edit Pengaduan <span class="text-muted fw-normal">#{{ complaint.id }}</span></h1>
+    <p class="page-header-sub">Perubahan hanya bisa dilakukan saat status masih "Menunggu"</p>
+  </div>
+  <a href="{{ url_for('main.complaint_detail', cid=complaint.id) }}" class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-1"></i>Batal
+  </a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><i class="fas fa-edit me-2 text-warning"></i>Ubah Detail Pengaduan</div>
+      <div class="card-body p-4">
+        <form method="POST" action="{{ url_for('main.complaint_edit', cid=complaint.id) }}"
+              enctype="multipart/form-data" novalidate>
+          {{ form.hidden_tag() }}
+
+          <div class="mb-3">
+            {{ form.title.label(class="form-label") }}
+            {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else "")) }}
+            {% for e in form.title.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              {{ form.category.label(class="form-label") }}
+              {{ form.category(class="form-select" + (" is-invalid" if form.category.errors else "")) }}
+              {% for e in form.category.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              {{ form.location.label(class="form-label") }}
+              {{ form.location(class="form-control" + (" is-invalid" if form.location.errors else "")) }}
+              {% for e in form.location.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+
+          <div class="mb-4">
+            {{ form.description.label(class="form-label") }}
+            {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), rows=5) }}
+            {% for e in form.description.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+
+          <!-- Existing photos -->
+          {% if photos %}
+          <div class="mb-3">
+            <label class="form-label">Foto Saat Ini ({{ photos|length }}/5)</label>
+            <div class="photo-preview-list">
+              {% for photo in photos %}
+              <div class="photo-thumb-wrap">
+                <img src="{{ photo.url if photo.url.startswith('http') else url_for('main.uploaded_file', filename=photo.url) }}"
+                     class="photo-thumb" alt="Foto {{ loop.index }}">
+                <form method="POST"
+                      action="{{ url_for('main.complaint_photo_delete', cid=complaint.id, pid=photo.id) }}"
+                      style="display:inline;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="remove-photo" title="Hapus foto"
+                          onclick="return confirm('Hapus foto ini?')">&times;</button>
+                </form>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Add more photos -->
+          {% if photos|length < 5 %}
+          <div class="mb-4">
+            <label class="form-label">Tambah Foto <span class="text-muted fw-normal">(maks. {{ 5 - photos|length }} foto lagi)</span></label>
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('photoInput').click()">
+              <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+              <div class="upload-text">Klik atau seret foto ke sini</div>
+              <div class="upload-hint">JPG, PNG, WEBP &bull; Maks. 5 MB per foto</div>
+              <input type="file" id="photoInput" name="photos" multiple
+                     accept="image/png,image/jpeg,image/webp">
+            </div>
+            <div class="photo-preview-list" id="previewList"></div>
+          </div>
+          {% endif %}
+
+          <div class="d-flex gap-2">
+            {{ form.submit(class="btn btn-warning") }}
+            <a href="{{ url_for('main.complaint_detail', cid=complaint.id) }}"
+               class="btn btn-outline-secondary">Batal</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card" style="border-left:4px solid var(--warning);">
+      <div class="card-body" style="font-size:.85rem;">
+        <div class="fw-semibold mb-2"><i class="fas fa-exclamation-triangle text-warning me-2"></i>Perhatian</div>
+        <p class="text-muted mb-0">
+          Setelah pengaduan masuk ke status <strong>Sedang Ditinjau</strong> atau lebih lanjut,
+          Anda tidak dapat melakukan perubahan lagi.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  var input = document.getElementById('photoInput');
+  if (!input) return;
+  var area = document.getElementById('uploadArea');
+  var list = document.getElementById('previewList');
+  var dt   = new DataTransfer();
+  var MAX  = {{ 5 - (photos|length) }};
+
+  area.addEventListener('dragover', function(e) { e.preventDefault(); area.classList.add('dragover'); });
+  area.addEventListener('dragleave', function() { area.classList.remove('dragover'); });
+  area.addEventListener('drop', function(e) { e.preventDefault(); area.classList.remove('dragover'); addFiles(e.dataTransfer.files); });
+  input.addEventListener('change', function() { addFiles(this.files); });
+
+  function addFiles(files) {
+    Array.from(files).forEach(function(f) {
+      if (dt.files.length >= MAX) return;
+      if (!f.type.match(/^image\//)) return;
+      dt.items.add(f);
+    });
+    input.files = dt.files;
+    renderPreviews();
+  }
+
+  function renderPreviews() {
+    list.innerHTML = '';
+    Array.from(dt.files).forEach(function(f, i) {
+      var wrap = document.createElement('div'); wrap.className = 'photo-thumb-wrap';
+      var img  = document.createElement('img');  img.className = 'photo-thumb';
+      img.src  = URL.createObjectURL(f);
+      var btn  = document.createElement('button'); btn.className = 'remove-photo'; btn.type = 'button';
+      btn.innerHTML = '&times;'; btn.onclick = function() { removeFile(i); };
+      wrap.appendChild(img); wrap.appendChild(btn); list.appendChild(wrap);
+    });
+  }
+
+  function removeFile(idx) {
+    var newDt = new DataTransfer();
+    Array.from(dt.files).forEach(function(f, i) { if (i !== idx) newDt.items.add(f); });
+    dt = newDt; input.files = dt.files; renderPreviews();
+  }
+})();
+</script>
+{% endblock %}

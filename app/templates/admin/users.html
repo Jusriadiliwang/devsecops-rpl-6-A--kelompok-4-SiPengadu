@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Kelola Pengguna{% endblock %}
+{% block topbar_title %}Kelola Pengguna{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-header-title">Kelola Pengguna</h1>
+    <p class="page-header-sub">{{ pagination.total }} pengguna terdaftar</p>
+  </div>
+</div>
+
+<!-- Search -->
+<div class="card mb-3">
+  <div class="card-body py-2 px-3">
+    <form method="GET" action="{{ url_for('admin.users') }}" class="row g-2 align-items-end">
+      <div class="col-md-6">
+        <label class="form-label" style="font-size:.78rem;">Cari Pengguna</label>
+        <input type="text" name="q" class="form-control form-control-sm"
+               placeholder="Username, nama, atau email…" value="{{ search }}">
+      </div>
+      <div class="col-auto d-flex gap-1">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="fas fa-search me-1"></i>Cari
+        </button>
+        {% if search %}
+        <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary btn-sm">
+          <i class="fas fa-times"></i>
+        </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  {% if users %}
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>#</th><th>Pengguna</th><th>Email</th>
+          <th>Pengaduan</th><th>Status</th><th>Bergabung</th><th class="text-end">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td class="text-muted">{{ u.id }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-circle" style="width:32px;height:32px;font-size:.75rem;flex-shrink:0;">
+                {% if u.avatar %}
+                  <img src="{{ u.avatar if u.avatar.startswith('http') else url_for('main.uploaded_file', filename=u.avatar) }}" alt="">
+                {% else %}
+                  {{ u.full_name[0]|upper }}
+                {% endif %}
+              </div>
+              <div>
+                <div class="fw-medium">{{ u.username }}</div>
+                <div class="text-muted" style="font-size:.75rem;">{{ u.full_name }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="text-muted">{{ u.email | truncate(28) }}</td>
+          <td class="text-center">
+            <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ u.complaints.count() }}</span>
+          </td>
+          <td>
+            {% if u.is_active %}
+            <span class="badge" style="background:#ecfdf5;color:#065f46;">Aktif</span>
+            {% else %}
+            <span class="badge" style="background:#fef2f2;color:#991b1b;">Nonaktif</span>
+            {% endif %}
+          </td>
+          <td class="text-muted">{{ u.created_at.strftime('%d %b %Y') }}</td>
+          <td class="text-end">
+            <a href="{{ url_for('admin.user_detail', uid=u.id) }}"
+               class="btn btn-icon btn-sm btn-outline-primary me-1" title="Detail">
+              <i class="fas fa-eye"></i>
+            </a>
+            <a href="{{ url_for('admin.user_edit', uid=u.id) }}"
+               class="btn btn-icon btn-sm btn-outline-warning" title="Edit">
+              <i class="fas fa-edit"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-users"></i></div>
+    <div class="empty-title">Tidak Ada Pengguna</div>
+    <p class="empty-sub">Coba ubah kata kunci pencarian</p>
+  </div>
+  {% endif %}
+
+  {% if pagination and pagination.pages > 1 %}
+  <div class="card-footer d-flex justify-content-between align-items-center">
+    <span class="text-muted" style="font-size:.82rem;">{{ users|length }} dari {{ pagination.total }}</span>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('admin.users', page=pagination.prev_num, q=search) }}">
+            <i class="fas fa-chevron-left"></i>
+          </a>
+        </li>
+        {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+          {% if p %}
+          <li class="page-item {% if p == pagination.page %}active{% endif %}">
+            <a class="page-link" href="{{ url_for('admin.users', page=p, q=search) }}">{{ p }}</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+          {% endif %}
+        {% endfor %}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('admin.users', page=pagination.next_num, q=search) }}">
+            <i class="fas fa-chevron-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

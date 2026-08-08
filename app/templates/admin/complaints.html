@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Kelola Pengaduan{% endblock %}
+{% block topbar_title %}Kelola Pengaduan{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-header-title">Kelola Pengaduan</h1>
+    <p class="page-header-sub">{{ pagination.total }} pengaduan ditemukan</p>
+  </div>
+</div>
+
+<!-- Filter -->
+<div class="card mb-3">
+  <div class="card-body py-2 px-3">
+    <form method="GET" action="{{ url_for('admin.complaints') }}" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label" style="font-size:.78rem;">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Semua Status</option>
+          {% for key, label in statuses %}
+          <option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" style="font-size:.78rem;">Kategori</label>
+        <select name="category" class="form-select form-select-sm">
+          <option value="">Semua Kategori</option>
+          {% for key, label in categories %}
+          <option value="{{ key }}" {% if category == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" style="font-size:.78rem;">Cari</label>
+        <input type="text" name="q" class="form-control form-control-sm"
+               placeholder="Judul atau lokasi…" value="{{ keyword }}">
+      </div>
+      <div class="col-md-2 d-flex gap-1">
+        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+          <i class="fas fa-search"></i>
+        </button>
+        <a href="{{ url_for('admin.complaints') }}" class="btn btn-outline-secondary btn-sm" title="Reset">
+          <i class="fas fa-times"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  {% if complaints %}
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>#</th><th>Judul</th><th>Pelapor</th><th>Kategori</th><th>Status</th><th>Tanggal</th>
+          <th class="text-end">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in complaints %}
+        <tr>
+          <td class="text-muted">{{ c.id }}</td>
+          <td>
+            <a href="{{ url_for('admin.complaint_detail', cid=c.id) }}"
+               class="text-decoration-none fw-medium text-dark">{{ c.title | truncate(42) }}</a>
+            {% if c.photos.count() > 0 %}
+            <span class="badge bg-secondary bg-opacity-10 text-secondary ms-1" style="font-size:.62rem;">
+              <i class="fas fa-image me-1"></i>{{ c.photos.count() }}
+            </span>
+            {% endif %}
+          </td>
+          <td class="text-muted">{{ c.author.username }}</td>
+          <td><span class="badge bg-secondary bg-opacity-10 text-secondary">{{ c.get_category_label() }}</span></td>
+          <td><span class="badge {{ c.get_status_badge() }}">{{ c.get_status_label() }}</span></td>
+          <td class="text-muted">{{ c.created_at.strftime('%d %b %Y') }}</td>
+          <td class="text-end">
+            <a href="{{ url_for('admin.complaint_detail', cid=c.id) }}"
+               class="btn btn-icon btn-sm btn-outline-primary me-1" title="Detail">
+              <i class="fas fa-eye"></i>
+            </a>
+            <form method="POST" action="{{ url_for('admin.complaint_delete', cid=c.id) }}"
+                  class="d-inline" onsubmit="return confirm('Hapus pengaduan #{{ c.id }}?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-icon btn-sm btn-outline-danger" title="Hapus">
+                <i class="fas fa-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-inbox"></i></div>
+    <div class="empty-title">Tidak Ada Pengaduan</div>
+    <p class="empty-sub">Coba ubah filter pencarian</p>
+  </div>
+  {% endif %}
+
+  {% if pagination and pagination.pages > 1 %}
+  <div class="card-footer d-flex justify-content-between align-items-center">
+    <span class="text-muted" style="font-size:.82rem;">{{ complaints|length }} dari {{ pagination.total }}</span>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('admin.complaints', page=pagination.prev_num, status=status, category=category, q=keyword) }}">
+            <i class="fas fa-chevron-left"></i>
+          </a>
+        </li>
+        {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+          {% if p %}
+          <li class="page-item {% if p == pagination.page %}active{% endif %}">
+            <a class="page-link" href="{{ url_for('admin.complaints', page=p, status=status, category=category, q=keyword) }}">{{ p }}</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+          {% endif %}
+        {% endfor %}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('admin.complaints', page=pagination.next_num, status=status, category=category, q=keyword) }}">
+            <i class="fas fa-chevron-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

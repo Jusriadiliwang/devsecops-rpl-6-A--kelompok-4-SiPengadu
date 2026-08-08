@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Daftar Akun{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <!-- Left panel -->
+  <div class="auth-left">
+    <div class="auth-left-content">
+      <div class="auth-logo">
+        <div class="auth-logo-icon"><i class="fas fa-bullhorn"></i></div>
+        <div>
+          <div class="auth-logo-text">SiPengadu</div>
+          <div class="auth-logo-sub">Sistem Pengaduan Masyarakat</div>
+        </div>
+      </div>
+      <div class="auth-tagline">Bergabung &<br>Buat Perubahan.</div>
+      <p class="auth-desc">
+        Daftarkan akun Anda dalam hitungan menit dan mulai sampaikan pengaduan secara resmi
+        kepada pihak berwenang.
+      </p>
+      <div class="auth-feature">
+        <div class="auth-feature-icon"><i class="fas fa-user-check"></i></div>
+        <span>Pendaftaran mudah, cepat, dan gratis.</span>
+      </div>
+      <div class="auth-feature" style="margin-top:8px;">
+        <div class="auth-feature-icon"><i class="fas fa-bell"></i></div>
+        <span>Notifikasi status pengaduan secara langsung.</span>
+      </div>
+      <div class="auth-feature" style="margin-top:8px;">
+        <div class="auth-feature-icon"><i class="fas fa-history"></i></div>
+        <span>Riwayat pengaduan tersimpan aman.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel (scrollable for longer form) -->
+  <div class="auth-right" style="align-items:flex-start; padding-top:40px; padding-bottom:40px;">
+    <div class="auth-form-box" style="max-width:420px;">
+      <h2 class="auth-form-title">Buat Akun Baru</h2>
+      <p class="auth-form-sub">Isi data diri Anda untuk mendaftar</p>
+
+      <form method="POST" action="{{ url_for('auth.register') }}" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            {{ form.username.label(class="form-label") }}
+            {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else ""),
+                             placeholder="budi123") }}
+            {% for e in form.username.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            <div class="form-text">Huruf, angka, underscore. 3–50 karakter.</div>
+          </div>
+
+          <div class="col-md-6">
+            {{ form.email.label(class="form-label") }}
+            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""),
+                          placeholder="email@contoh.com") }}
+            {% for e in form.email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="col-12">
+            {{ form.full_name.label(class="form-label") }}
+            {{ form.full_name(class="form-control" + (" is-invalid" if form.full_name.errors else ""),
+                              placeholder="Nama lengkap sesuai KTP") }}
+            {% for e in form.full_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            {{ form.phone.label(class="form-label") }}
+            {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else ""),
+                          placeholder="0812xxxxxxxx") }}
+            {% for e in form.phone.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            {# Spacer to align password row #}
+          </div>
+
+          <div class="col-12">
+            {{ form.address.label(class="form-label") }}
+            {{ form.address(class="form-control" + (" is-invalid" if form.address.errors else ""),
+                            rows=2, placeholder="Alamat lengkap") }}
+            {% for e in form.address.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            {{ form.password.label(class="form-label") }}
+            <div class="input-group">
+              {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""),
+                               placeholder="Min. 8 karakter", id="regPw") }}
+              <button class="input-group-text" type="button" onclick="togglePw('regPw',this)" style="cursor:pointer;">
+                <i class="fas fa-eye"></i>
+              </button>
+              {% for e in form.password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            {{ form.confirm_password.label(class="form-label") }}
+            <div class="input-group">
+              {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else ""),
+                                      placeholder="Ulangi password", id="regCpw") }}
+              <button class="input-group-text" type="button" onclick="togglePw('regCpw',this)" style="cursor:pointer;">
+                <i class="fas fa-eye"></i>
+              </button>
+              {% for e in form.confirm_password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-info mt-3 mb-0 py-2" style="font-size:.78rem;">
+          <i class="fas fa-shield-alt me-1"></i>
+          Password harus ≥8 karakter, mengandung huruf kapital, huruf kecil, angka, dan karakter spesial.
+        </div>
+
+        <div class="d-grid mt-3 mb-3">
+          {{ form.submit(class="btn btn-primary btn-lg") }}
+        </div>
+
+        <p class="text-center text-muted" style="font-size:.85rem;">
+          Sudah punya akun?
+          <a href="{{ url_for('auth.login') }}" class="fw-semibold text-decoration-none">Masuk di sini</a>
+        </p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function togglePw(id, btn) {
+  var inp = document.getElementById(id);
+  var icon = btn.querySelector('i');
+  if (inp.type === 'password') {
+    inp.type = 'text'; icon.className = 'fas fa-eye-slash';
+  } else {
+    inp.type = 'password'; icon.className = 'fas fa-eye';
+  }
+}
+</script>
+{% endblock %}

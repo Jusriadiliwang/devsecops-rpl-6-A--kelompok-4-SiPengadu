@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Pengaduan #{{ complaint.id }} (Admin){% endblock %}
+{% block topbar_title %}Detail Pengaduan{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-header-title">Pengaduan <span class="text-muted fw-normal">#{{ complaint.id }}</span></h1>
+    <p class="page-header-sub">{{ complaint.created_at.strftime('%d %B %Y, %H:%M') }} WIB</p>
+  </div>
+  <a href="{{ url_for('admin.complaints') }}" class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-1"></i>Kembali
+  </a>
+</div>
+
+<div class="row g-4">
+  <!-- Detail -->
+  <div class="col-lg-7">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-file-alt me-2 text-primary"></i>Isi Pengaduan</span>
+        <span class="badge {{ complaint.get_status_badge() }}">{{ complaint.get_status_label() }}</span>
+      </div>
+      <div class="card-body p-4">
+        <h5 class="fw-bold mb-3">{{ complaint.title }}</h5>
+
+        <div class="row g-2 mb-4" style="font-size:.82rem;">
+          <div class="col-sm-6">
+            <div class="text-muted fw-semibold mb-1" style="text-transform:uppercase;letter-spacing:.05em;font-size:.7rem;">Pelapor</div>
+            <a href="{{ url_for('admin.user_detail', uid=complaint.author.id) }}" class="text-decoration-none fw-medium">
+              {{ complaint.author.full_name }} <span class="text-muted">(@{{ complaint.author.username }})</span>
+            </a>
+          </div>
+          <div class="col-sm-6">
+            <div class="text-muted fw-semibold mb-1" style="text-transform:uppercase;letter-spacing:.05em;font-size:.7rem;">Kategori</div>
+            <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ complaint.get_category_label() }}</span>
+          </div>
+          <div class="col-sm-6 mt-2">
+            <div class="text-muted fw-semibold mb-1" style="text-transform:uppercase;letter-spacing:.05em;font-size:.7rem;">Lokasi</div>
+            <span><i class="fas fa-map-marker-alt text-danger me-1"></i>{{ complaint.location }}</span>
+          </div>
+          {% if complaint.reviewer %}
+          <div class="col-sm-6 mt-2">
+            <div class="text-muted fw-semibold mb-1" style="text-transform:uppercase;letter-spacing:.05em;font-size:.7rem;">Ditinjau Oleh</div>
+            {{ complaint.reviewer.full_name }}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="text-muted fw-semibold mb-2" style="text-transform:uppercase;letter-spacing:.05em;font-size:.7rem;">Deskripsi</div>
+        <div class="p-3 rounded" style="background:var(--surface-2);white-space:pre-wrap;line-height:1.75;font-size:.875rem;">{{ complaint.description }}</div>
+
+        {% if complaint.admin_response %}
+        <hr class="my-4">
+        <div class="text-muted fw-semibold mb-2" style="text-transform:uppercase;letter-spacing:.05em;font-size:.7rem;">
+          <i class="fas fa-reply text-primary me-1"></i>Tanggapan Sebelumnya
+        </div>
+        <div class="p-3 rounded" style="background:#eef2ff;white-space:pre-wrap;line-height:1.75;font-size:.875rem;">{{ complaint.admin_response }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Photo gallery -->
+    {% if photo_urls %}
+    <div class="card">
+      <div class="card-header"><i class="fas fa-images me-2 text-primary"></i>Foto Bukti ({{ photo_urls|length }})</div>
+      <div class="card-body p-4">
+        <div class="gallery-grid">
+          {% for url in photo_urls %}
+          <div class="gallery-item" onclick="openLightbox('{{ url }}')">
+            <img src="{{ url }}" alt="Foto {{ loop.index }}" loading="lazy">
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Action panel -->
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header" style="background:var(--primary);color:#fff;">
+        <i class="fas fa-gavel me-2"></i>Tindakan Admin
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="{{ url_for('admin.complaint_detail', cid=complaint.id) }}" novalidate>
+          {{ form.hidden_tag() }}
+
+          <div class="mb-3">
+            {{ form.status.label(class="form-label") }}
+            {{ form.status(class="form-select" + (" is-invalid" if form.status.errors else "")) }}
+            {% for e in form.status.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-4">
+            {{ form.admin_response.label(class="form-label") }}
+            {{ form.admin_response(
+                class="form-control" + (" is-invalid" if form.admin_response.errors else ""),
+                rows=5,
+                placeholder="Tulis tanggapan, keterangan, atau alasan penolakan…") }}
+            {% for e in form.admin_response.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+
+          {{ form.submit(class="btn btn-primary w-100") }}
+        </form>
+
+        <hr class="my-3">
+
+        <form method="POST" action="{{ url_for('admin.complaint_delete', cid=complaint.id) }}"
+              onsubmit="return confirm('Hapus pengaduan ini secara permanen? Semua foto akan ikut dihapus.')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-outline-danger w-100">
+            <i class="fas fa-trash me-2"></i>Hapus Pengaduan
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+  <img class="lightbox-img" id="lightboxImg" src="" alt="Foto bukti">
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openLightbox(url) {
+  document.getElementById('lightboxImg').src = url;
+  document.getElementById('lightbox').classList.add('active');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+}
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeLightbox(); });
+</script>
+{% endblock %}

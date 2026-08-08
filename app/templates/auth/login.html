@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Masuk{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <!-- Left panel -->
+  <div class="auth-left">
+    <div class="auth-left-content">
+      <div class="auth-logo">
+        <div class="auth-logo-icon"><i class="fas fa-bullhorn"></i></div>
+        <div>
+          <div class="auth-logo-text">SiPengadu</div>
+          <div class="auth-logo-sub">Sistem Pengaduan Masyarakat</div>
+        </div>
+      </div>
+      <div class="auth-tagline">Suara Anda,<br>Perubahan Nyata.</div>
+      <p class="auth-desc">
+        Sampaikan pengaduan Anda secara digital, transparan, dan dapat dipantau langsung.
+        Bersama kami, setiap aspirasi masyarakat akan ditindaklanjuti secara resmi.
+      </p>
+      <div class="auth-feature">
+        <div class="auth-feature-icon"><i class="fas fa-lock"></i></div>
+        <span>Aman & Terenkripsi — data Anda terlindungi.</span>
+      </div>
+      <div class="auth-feature" style="margin-top:8px;">
+        <div class="auth-feature-icon"><i class="fas fa-eye"></i></div>
+        <span>Pantau status pengaduan secara real-time.</span>
+      </div>
+      <div class="auth-feature" style="margin-top:8px;">
+        <div class="auth-feature-icon"><i class="fas fa-camera"></i></div>
+        <span>Upload foto bukti langsung dari perangkat Anda.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="auth-right">
+    <div class="auth-form-box">
+      <h2 class="auth-form-title">Selamat Datang Kembali</h2>
+      <p class="auth-form-sub">Masuk ke akun SiPengadu Anda</p>
+
+      <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="mb-3">
+          {{ form.username.label(class="form-label") }}
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-user"></i></span>
+            {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else ""),
+                             placeholder="Username Anda") }}
+            {% for e in form.username.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+        </div>
+
+        <div class="mb-3">
+          {{ form.password.label(class="form-label") }}
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+            {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""),
+                             placeholder="Password Anda", id="loginPassword") }}
+            <button class="input-group-text" type="button" onclick="togglePw('loginPassword',this)"
+                    style="cursor:pointer;border-left:0;">
+              <i class="fas fa-eye"></i>
+            </button>
+            {% for e in form.password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between mb-4">
+          <div class="form-check mb-0">
+            {{ form.remember_me(class="form-check-input") }}
+            {{ form.remember_me.label(class="form-check-label text-muted", style="font-size:.82rem;") }}
+          </div>
+        </div>
+
+        <div class="d-grid mb-4">
+          {{ form.submit(class="btn btn-primary btn-lg") }}
+        </div>
+
+        <p class="text-center text-muted" style="font-size:.85rem;">
+          Belum punya akun?
+          <a href="{{ url_for('auth.register') }}" class="fw-semibold text-decoration-none">Daftar sekarang</a>
+        </p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function togglePw(id, btn) {
+  var inp = document.getElementById(id);
+  var icon = btn.querySelector('i');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.className = 'fas fa-eye-slash';
+  } else {
+    inp.type = 'password';
+    icon.className = 'fas fa-eye';
+  }
+}
+</script>
+{% endblock %}

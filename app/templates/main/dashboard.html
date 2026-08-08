@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block topbar_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-header-title">Selamat datang, {{ current_user.full_name.split()[0] }} 👋</h1>
+    <p class="page-header-sub">Ringkasan aktivitas pengaduan Anda</p>
+  </div>
+  <a href="{{ url_for('main.complaint_new') }}" class="btn btn-primary d-none d-md-inline-flex align-items-center gap-2">
+    <i class="fas fa-plus"></i>Buat Pengaduan
+  </a>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon indigo"><i class="fas fa-inbox"></i></div>
+      <div>
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-label">Total Pengaduan</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon amber"><i class="fas fa-clock"></i></div>
+      <div>
+        <div class="stat-value">{{ stats.pending }}</div>
+        <div class="stat-label">Menunggu</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon cyan"><i class="fas fa-search"></i></div>
+      <div>
+        <div class="stat-value">{{ stats.in_review }}</div>
+        <div class="stat-label">Sedang Ditinjau</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon emerald"><i class="fas fa-check-circle"></i></div>
+      <div>
+        <div class="stat-value">{{ stats.resolved }}</div>
+        <div class="stat-label">Selesai</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent complaints -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="fas fa-history me-2 text-primary"></i>Pengaduan Terbaru</span>
+    <a href="{{ url_for('main.complaints') }}" class="btn btn-sm btn-outline-primary">Lihat Semua</a>
+  </div>
+  {% if recent %}
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th style="width:44px;">#</th>
+          <th>Judul</th>
+          <th>Kategori</th>
+          <th>Status</th>
+          <th>Tanggal</th>
+          <th style="width:52px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in recent %}
+        <tr>
+          <td class="text-muted">{{ c.id }}</td>
+          <td class="fw-medium">{{ c.title | truncate(50) }}</td>
+          <td><span class="badge bg-secondary bg-opacity-10 text-secondary">{{ c.get_category_label() }}</span></td>
+          <td><span class="badge {{ c.get_status_badge() }}">{{ c.get_status_label() }}</span></td>
+          <td class="text-muted">{{ c.created_at.strftime('%d %b %Y') }}</td>
+          <td>
+            <a href="{{ url_for('main.complaint_detail', cid=c.id) }}"
+               class="btn btn-icon btn-sm btn-outline-secondary" title="Detail">
+              <i class="fas fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-inbox"></i></div>
+    <div class="empty-title">Belum Ada Pengaduan</div>
+    <p class="empty-sub">Anda belum pernah mengirimkan pengaduan.</p>
+    <a href="{{ url_for('main.complaint_new') }}" class="btn btn-primary mt-2">
+      <i class="fas fa-plus me-2"></i>Buat Pengaduan Pertama
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
